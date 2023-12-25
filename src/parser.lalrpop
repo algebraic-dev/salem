@@ -1,0 +1,38 @@
+use std::str::FromStr;
+use crate::tree::*;
+
+grammar;
+
+Comma<T>: Vec<T> = { // (1)
+    <mut v:(<T> ",")*> <e:T?> => match e { // (2)
+        None => v,
+        Some(e) => {
+            v.push(e);
+            v
+        }
+    }
+};
+
+pub Atom: Atom = {
+    <name: LowerStartIdent> => Atom { name, args: vec![] },
+    <name: LowerStartIdent> "(" <args: Comma<Term>> ")" => Atom { name, args },  
+}
+
+Term: Term = {
+    <n:Num> => Term::Number(n),
+    <var: UpperStartIdent> => Term::Variable(var),
+    <atom: Atom> => Term::Atom(atom),
+};
+
+Clause: Clause = {
+    <head: Atom> "." => Clause::Fact(head),
+    <head: Atom> ":-" <body: Comma<Atom>> "." => Clause::Rule(head, body),
+};
+
+pub Program: Program = {
+    <clauses: Clause*> => Program { clauses },
+};
+
+Num: i32 = <s:r"[0-9]+"> => i32::from_str(s).unwrap();
+LowerStartIdent: String = <s:r"[a-z][a-zA-Z0-9_]*"> => s.to_string();
+UpperStartIdent: String = <s:r"[A-Z][a-zA-Z0-9_]*"> => s.to_string();
